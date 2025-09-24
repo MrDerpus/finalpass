@@ -32,7 +32,7 @@ class function:
 
 	@staticmethod
 	# Generate a 35 character long password.
-	def generate(pass_length:int = 35) -> bytes:
+	def generate(pass_length:int = 40) -> bytes:
 
 		# string to list
 		to_list = []
@@ -98,7 +98,6 @@ class AES:
 		mac = hmac.new(hmac_key, salt + iv + ciphertext, hashlib.sha256).digest()
 		
 		total = salt + iv + ciphertext + mac
-		total = total
 		return total
 
 
@@ -185,10 +184,13 @@ class database:
 		database_password = function.passinput(' Enter database password: ')
 		cursor.execute(f'PRAGMA key = "{database_password}";')
 		
-		
-
-		command = f'SELECT {item} FROM database WHERE {flag} = "{value}";'	
-		copied_item = cursor.execute(command.strip()).fetchall()[0][0].strip()
+	
+		try:
+			command = f'SELECT {item} FROM database WHERE {flag} = "{value}";'
+			copied_item = cursor.execute(command.strip()).fetchall()[0][0].strip()
+		except Exception as e:
+			function.Print(f' {flag}={value} could not be found in database.\n', fg='bright_red')
+			kill()
 
 		pycopy(copied_item)
 		
