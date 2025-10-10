@@ -199,7 +199,7 @@ match function:
 		cursor.execute(f'PRAGMA kdf_iter = {database.kdf};')
 
 		if(item == 'password'):
-			new_password = func.generate()
+			new_password = func.generate(password_length)
 			encrypted_password = AES.encrypt(database_password, new_password)
 
 			command = 'UPDATE database SET password = ? WHERE service = ?;'
