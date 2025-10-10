@@ -20,6 +20,37 @@ col = COLOUR.Colours
 
 
 class function:
+	
+	@staticmethod
+	def read_config_file():
+		config_path = os.path.expanduser('~/.config/finalpass/finalpass.conf')
+		with open(config_path, 'r') as config:
+		#with open('finalpass.conf', 'r') as config:
+
+			return_values = {}
+
+			for line in config:
+				line = line.strip()
+				# Skip over line if blank or comment.
+				if(not line or line.startswith(('#', ';'))): continue
+				
+				line = line.split('=')
+				# Skip line if incomplete.
+				if(len(line) < 2): continue
+
+				
+				# Assign variables.
+				variable = line[0].strip()
+				value    = line[1].strip()
+
+				match variable:
+					case 'database_location':
+						return_values[variable] = os.path.expanduser(value)
+
+					case _: return_values[variable] = value
+		
+		return return_values
+
 
 	@staticmethod
 	def Print(text:str='', bg:str='black', fg:str='bright_white') -> None:
@@ -31,8 +62,7 @@ class function:
 
 
 	@staticmethod
-	# Generate a 35 character long password.
-	def generate(pass_length:int = 40) -> bytes:
+	def generate(pass_length:int) -> bytes:
 
 		# string to list
 		to_list = []
@@ -81,7 +111,7 @@ class AES:
 	def encrypt(password:str, plaintext:bytes) -> bytes:
 		password_b = password.encode('utf-8')
 		salt = os.urandom(AES.SALT_LEN)
-		iv = os.urandom(AES.IV_LEN)
+		iv   = os.urandom(AES.IV_LEN)
 		key, hmac_key = AES._derive_keys(password_b, salt)
 
 		p = subprocess.run(
@@ -142,8 +172,11 @@ class AES:
 
 
 class database:
+	kdf:int = 640000
+
 	@staticmethod
 	def create_db(cursor) -> None:
+
 		# Create table
 		command = '''
 		CREATE TABLE IF NOT EXISTS database (
@@ -153,15 +186,16 @@ class database:
 			password BLOB
 		);
 		'''
-		cursor.execute(command.strip())
+		cursor.execute(command.strip())		
 
 
 	@staticmethod
-	def add(cursor, service:str='NULL', email:str='NULL', username:str='NULL') -> None:
+	def add(cursor, password_length, service:str='NULL', email:str='NULL', username:str='NULL') -> None:
 		database_password = function.passinput(' Enter database password: ')
 		cursor.execute(f'PRAGMA key = "{database_password}";')
+		cursor.execute(f'PRAGMA kdf_iter = {database.kdf};')
 		
-		generated_password = AES.encrypt(database_password, function.generate())
+		generated_password = AES.encrypt(database_password, function.generate(password_length))
 
 		command = f'''
 		INSERT INTO database (service, username, email, password)
@@ -173,7 +207,7 @@ class database:
 
 
 	@staticmethod
-	def select(cursor, item:str='NULL', flag:str='NULL', value:str='NULL') -> None:
+	def select(cursor, sleep_time, item:str='NULL', flag:str='NULL', value:str='NULL') -> None:
 		
 		accepted_keyword = ['service', 'email', 'username', 'password']
 
@@ -183,6 +217,7 @@ class database:
 		
 		database_password = function.passinput(' Enter database password: ')
 		cursor.execute(f'PRAGMA key = "{database_password}";')
+		cursor.execute(f'PRAGMA kdf_iter = {database.kdf};')
 		
 	
 		try:
@@ -200,5 +235,5 @@ class database:
 			copied_item = AES.decrypt(database_password, copied_item)
 			del database_password
 			pycopy(copied_item)
-			sleep(10)
+			sleep(sleep_time)
 			pycopy('')

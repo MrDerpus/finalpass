@@ -1,0 +1,12 @@
+Add mode that allows user to enter a cursers program, only needing one password entry to edit database.
+
+Added commands:
+version & help
+
+Added configurable config file, allowing
+the user to set:
+database location
+clipboard clear time
+Generated password length
+
+Edited functions to allow variable pass though reguarding config file inputs

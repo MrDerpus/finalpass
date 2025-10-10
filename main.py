@@ -1,13 +1,5 @@
-# [x] add    = add new service,  needs db password, generates, encrypts and stores password.
-# [x] list   = list service names, needs db password
-# [x] remove = remove service,  needs db password
-# [x] change = change service name or password, needs db password
-# [x] select = select service password, needs db password
-#
-# password is chosen at random, default is 35 characters long.  Why 35? because it's better than 32.
-# stored password = encrypted password, protected with hashed db password
 '''
-Version: v1.1.0
+Version: v1.2.0
 
 Author: MrDerpus
 
@@ -21,11 +13,11 @@ Ubuntu Linux 24.04.3
 # ^^^ This will add a service, email, username and then generate, encrypt & add a random password to the DB
 
 # finalpass select password service=facebook
-# ^^^ This will copy the unencrypted password assoiciated to a service in a database to the clipboard. 
+# ^^^ This will copy the unencrypted password associated to a service in a database to the clipboard. 
 
 from sys      import argv, exit as kill
 from settings import function as func, AES, database
-from os.path  import exists
+from os.path  import exists, join
 
 from random   import shuffle
 from hashlib  import sha512 as hash
@@ -34,14 +26,24 @@ import traceback
 from pysqlcipher3 import dbapi2 as sqlite3
 
 
+# Read config file
+config_file = func.read_config_file()
+database_location = config_file['database_location']
+clear_time = int(config_file['clipboard_clear_time'])
+password_length = int(config_file['password_length'])
+#print(config_file)
+
+version = '1.2.0'
+
 # Remove main.py from argument list
 arguments = argv
-if(arguments[0] == 'main.py'): arguments.remove(arguments[0])
-
-
+if(arguments[0] == 'main.py' or './finalpass' or 'finalpass'):
+	arguments.remove(arguments[0])
 
 # Create & setup db if it does not exist.
-db_file = 'hashed_passwords.db'
+db_file = join(database_location, 'encrypted_passwords.db')
+
+# Database setup.
 if(not exists(db_file)):
 	while(True):
 		func.Print(' Enter a password that only YOU will remember.\n This password will be used to access your passwords in the database.\n Your password will be hidden.', fg='bright_cyan')
@@ -56,6 +58,7 @@ if(not exists(db_file)):
 
 
 			cursor.execute(f'PRAGMA key = "{database_password}";')
+			cursor.execute(f'PRAGMA kdf_iter = {database.kdf};')
 			database.create_db(cursor=cursor)
 			connect.commit()
 			connect.close()
@@ -64,20 +67,28 @@ if(not exists(db_file)):
 		else: print('\n\n')
 
 
-
 # Connect to Database
 connect  = sqlite3.connect(db_file)
 cursor   = connect.cursor()
 
 
-
 # loop through commands
-function = arguments[0].lower()
+if(len(arguments) == 0):
+	func.Print(' No arguments given.', fg='bright_red')
+	kill()
+
+arguments[0] = arguments[0].upper()
+function = arguments[0]
 arguments.remove(function)
 match function:
 
-	# Add a service, 
-	case 'add':
+	# Display version
+	case 'VERSION':
+		print(f'\n finalpass version: v{version}')
+
+
+	# Add a service.
+	case 'ADD':
 		
 		service  = 'NULL'
 		email    = 'NULL'
@@ -101,13 +112,13 @@ match function:
 		
 
 
-		database.add(cursor=cursor, service=service, email=email, username=username)
+		database.add(cursor=cursor, service=service, email=email, username=username, password_length=password_length)
 		connect.commit()
 		connect.close()
 
 
 	# Select item from table (service, email, username, password)
-	case 'select':
+	case 'SELECT':
 
 		# Select entry from 
 		try:
@@ -121,15 +132,16 @@ match function:
 			func.Print(f' Flag error: \n{e}\n', fg='bright_red')
 			kill()
 
-		database.select(cursor=cursor, item=item, flag=flag_name, value=value)
+		database.select(cursor=cursor, item=item, flag=flag_name, value=value, sleep_time=clear_time)
 		connect.commit()
 		connect.close()
 
 
 	# list services within database.
-	case 'list':
+	case 'LIST':
 		database_password = func.passinput(' Enter password: ')
 		cursor.execute(f'PRAGMA key = "{database_password}";')
+		cursor.execute(f'PRAGMA kdf_iter = {database.kdf};')
 		del database_password
 
 		service_list = cursor.execute('SELECT service FROM database;').fetchall()
@@ -143,9 +155,10 @@ match function:
 
 
 	# Remove entire entry associated with the provided service.
-	case 'remove':
+	case 'REMOVE':
 		database_password = func.passinput(' Enter password: ')
 		cursor.execute(f'PRAGMA key = "{database_password}";')
+		cursor.execute(f'PRAGMA kdf_iter = {database.kdf};')
 		del database_password
 
 		try:
@@ -167,7 +180,7 @@ match function:
 
 
 	# Change item in database.
-	case 'change':
+	case 'CHANGE':
 
 		try:
 			flag = arguments[1].split('=')
@@ -183,6 +196,7 @@ match function:
 
 		database_password = func.passinput(' Enter password: ')
 		cursor.execute(f'PRAGMA key = "{database_password}";')
+		cursor.execute(f'PRAGMA kdf_iter = {database.kdf};')
 
 		if(item == 'password'):
 			new_password = func.generate()
@@ -213,7 +227,7 @@ match function:
 
 	# return error when given a false function.
 	case _:
-		func.Print(f' {function} is not a valid function.\n add, select, list, remove & change', fg='bright_red')
+		func.Print(f' {function} is not a valid function.\n version, add, select, list, remove & change are valid options', fg='bright_red')
 
 kill()
 # -----------
