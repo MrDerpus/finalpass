@@ -1,10 +1,10 @@
-finalpass v1.2.0
+finalpass v1.2.1
 ================
 
 **The only local password manager and generator, *I* will ever need.** <br>
 
 ```
-Version: v1.2.0
+Version: v1.2.1
 
 Author: MrDerpus
 

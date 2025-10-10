@@ -1,6 +1,5 @@
+version = 'v1.2.1'
 '''
-Version: v1.2.0
-
 Author: MrDerpus
 
 Description:
@@ -32,8 +31,6 @@ database_location = config_file['database_location']
 clear_time = int(config_file['clipboard_clear_time'])
 password_length = int(config_file['password_length'])
 #print(config_file)
-
-version = '1.2.0'
 
 # Remove main.py from argument list
 arguments = argv
