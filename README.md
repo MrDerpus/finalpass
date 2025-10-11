@@ -1,10 +1,10 @@
-finalpass v1.2.1
+finalpass v1.3.0
 ================
 
 **The only local password manager and generator, *I* will ever need.** <br>
 
 ```
-Version: v1.2.1
+Version: v1.3.0
 
 Author: MrDerpus
 
@@ -36,7 +36,16 @@ The database is also set with a sha512 hash of the users desired password.
 The database password is never stored in the database.
 
 <br><br>
-2. List:
+2. massadd
+```sh
+finalpass massadd massadd-file.csv
+```
+
+This allows you to add multiple inputs to the encrypted database with a single password entry, and using a single CSV file.<br>
+See massadd CSV file format standards at the bottom of the README.md
+
+<br><br>
+3. List:
 ```sh
 finalpass list
 ```
@@ -44,7 +53,7 @@ finalpass list
 This will list saved services in the database.
 
 <br><br>
-3. select:
+4. select:
 ```sh
 # Select password associated with service.
 # The password is decrypted and sent to the users clipboard for 10 seconds,
@@ -59,14 +68,14 @@ finalpass select username service=facebook
 ```
 
 <br><br>
-4. remove:
+5. remove:
 ```sh
 # Remove entire entry associated with given service name.
 finalpass remove service=facebook
 ```
 
 <br><br>
-5. change:
+6. change:
 ```sh
 # Change any item in database table associated with given parameters.
 # Change service name.
@@ -84,7 +93,7 @@ finalpass change password service=twitter
 
 
 <br><br>
-6. version:
+7. version:
 ```sh
 # Display finalpass version
 finalpass version
@@ -96,6 +105,9 @@ finalpass version
 ```ini
 ; Where the database will be stored.
 database_location=~/.config/finalpass
+
+# The name of the database you want create/access
+database_name=encrypted_database.db
 
 # Time (in seconds) it will take to clear you clipboard after selection password.
 clipboard_clear_time=15
@@ -115,3 +127,24 @@ sudo rm -rf ~/.config/finalpass
 # Deletes the executable.
 sudo rm -rf /usr/local/bin/finalpass
 ```
+
+---
+<br>
+
+# massadd CSV file formatting.
+```csv
+; service, email, username
+# -------------------------
+
+Netflix, fake-user1@email.com, username1
+GitHub,  NULL, username2
+Twitter, fake-user3@email.com, NULL
+Gmail,,
+;Ebay,    fake-user4@email.com, username4
+```
+
+Comments can be either: **';'** or **'#'** at the start of a line. <br>
+Blank lines and comment lines will be ignored. <br>
+Lines with with less than 3 comma separated values will also be ignored. <br>
+Any entry you do not wish to either enter an email or a username must be equal to ***'NULL'.*** <br>
+However, this is also done for you if there is an empty value after a comma.

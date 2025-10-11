@@ -1,4 +1,4 @@
-version = 'v1.2.1'
+version = 'v1.3.0'
 '''
 Author: MrDerpus
 
@@ -8,11 +8,6 @@ A secure CLI password generator & manager.
 Python 3.12.3
 Ubuntu Linux 24.04.3
 '''
-# finalpass add service=facebook email=email@email.com username=username-here
-# ^^^ This will add a service, email, username and then generate, encrypt & add a random password to the DB
-
-# finalpass select password service=facebook
-# ^^^ This will copy the unencrypted password associated to a service in a database to the clipboard. 
 
 from sys      import argv, exit as kill
 from settings import function as func, AES, database
@@ -30,6 +25,7 @@ config_file = func.read_config_file()
 database_location = config_file['database_location']
 clear_time = int(config_file['clipboard_clear_time'])
 password_length = int(config_file['password_length'])
+database_name = config_file['database_name']
 #print(config_file)
 
 # Remove main.py from argument list
@@ -38,11 +34,12 @@ if(arguments[0] == 'main.py' or './finalpass' or 'finalpass'):
 	arguments.remove(arguments[0])
 
 # Create & setup db if it does not exist.
-db_file = join(database_location, 'encrypted_passwords.db')
+db_file = join(database_location, database_name)
 
 # Database setup.
 if(not exists(db_file)):
 	while(True):
+		func.Print(f' Database name: {db_file} \n', fg='bright_yellow')
 		func.Print(' Enter a password that only YOU will remember.\n This password will be used to access your passwords in the database.\n Your password will be hidden.', fg='bright_cyan')
 		pass_attempt_1 = func.passinput(' Enter password: ')
 		pass_attempt_2 = func.passinput(' Confirm password: ')
@@ -75,13 +72,13 @@ if(len(arguments) == 0):
 	kill()
 
 arguments[0] = arguments[0].upper()
-function = arguments[0]
+function     = arguments[0]
 arguments.remove(function)
 match function:
 
 	# Display version
 	case 'VERSION':
-		print(f'\n finalpass version: v{version}')
+		print(f'\n finalpass version: {version}')
 
 
 	# Add a service.
@@ -221,6 +218,59 @@ match function:
 		connect.commit()
 		connect.close()
 	
+
+	# Mass add accounts to the database.
+	case 'MASSADD':
+		valid_file_input = False
+
+		database_password = func.passinput(' Enter database password: ')
+		cursor.execute(f'PRAGMA key = "{database_password}";')
+		cursor.execute(f'PRAGMA kdf_iter = {database.kdf};')
+
+
+		massread_file = arguments[0].strip()
+		if(not exists(massread_file)):
+			func.Print(f' \'{massread_file}\' does could not be found. \n', fg='bright_red')
+			kill()
+
+		
+		with open(massread_file, 'r') as file:
+			for line in file:
+				line = line.strip()
+				# Skip over line if blank or comment.
+				if(not line or line.startswith(('#', ';'))): continue
+
+				# Sanitise and cleanse entries.
+				split_line = line.split(',')
+				for i in range(len(split_line)):
+					split_line[i] = split_line[i].strip()
+					if(split_line[i] == ''): split_line[i] = 'NULL'
+					#if('' in split_line): split_line.remove('')
+				
+				# Skip line if incomplete.
+				if(len(split_line) <3): # Awww
+					continue
+
+
+				service  = split_line[0]
+				email    = split_line[1]
+				username = split_line[2]
+				valid_file_input = True
+
+
+				'''# Debug file value printing.
+				list_print = [line, split_line, service, email, username]
+				for i in range(len(list_print)):
+					print(f'{list_print[i]=}')
+
+					if(i >= 4): print('------------ \n')
+				'''
+
+				if(valid_file_input):
+					database.massadd(cursor=cursor, database_password=database_password, service=service, email=email, username=username, password_length=password_length)
+			
+		connect.commit()
+		connect.close()
 
 	# return error when given a false function.
 	case _:

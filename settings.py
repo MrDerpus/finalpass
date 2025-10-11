@@ -237,3 +237,16 @@ class database:
 			pycopy(copied_item)
 			sleep(sleep_time)
 			pycopy('')
+
+	
+	@staticmethod
+	def massadd(cursor, password_length:int, database_password:str, service:str='NULL', email:str='NULL', username:str='NULL') -> None:		
+		generated_password = AES.encrypt(database_password, function.generate(password_length))
+
+		command = f'''
+		INSERT INTO database (service, username, email, password)
+		VALUES(?, ?, ?, ?)
+		'''
+
+		cursor.execute(command.strip(), (service, username, email, generated_password))
+		del generated_password
