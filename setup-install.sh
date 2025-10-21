@@ -17,7 +17,7 @@ echo "password_length=32"            >> "$CONFIG_FILE"
 
 # Install dependencies for pysqlchipher3
 sudo apt update
-sudo apt install -y python3.12-dev libsqlcipher-dev zlib1g-dev build-essential
+sudo apt install -y python3.12-dev libsqlcipher-dev zlib1g-dev build-essential xclip
 sudo apt install --reinstall zlib1g=1:1.3.dfsg-3.1ubuntu2 zlib1g-dev
 
 # Install program reqs.txt
