@@ -10,7 +10,7 @@ DATABASE_NAME="encrypted_database.db"
 
 # create .config directory & create config file
 mkdir -p "$CONFIG_LOC"
-echo "database_location=$CONFIG_LOC" >> "$CONFIG_FILE"
+echo "database_location=$CONFIG_LOC" >  "$CONFIG_FILE"
 echo "database_name=$DATABASE_NAME"  >> "$CONFIG_FILE"
 echo "clipboard_clear_time=15"       >> "$CONFIG_FILE"
 echo "password_length=32"            >> "$CONFIG_FILE"
