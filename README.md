@@ -1,10 +1,11 @@
-finalpass v1.3.0
+finalpass v2.0.0
 ================
-
+# README needs to be updated, will do that tomorrow.
+## I have completely rewrote everything.
 **The only local password manager and generator, *I* will ever need.** <br>
 
 ```
-Version: v1.3.0
+Version: v2.0.0
 
 Author: MrDerpus
 
@@ -109,7 +110,7 @@ database_location=~/.config/finalpass
 # The name of the database you want create/access
 database_name=encrypted_database.db
 
-# Time (in seconds) it will take to clear you clipboard after selection password.
+# Time (in seconds) it will take to clear your clipboard after selection password.
 clipboard_clear_time=15
 
 # Length of generated password.

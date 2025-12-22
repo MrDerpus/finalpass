@@ -1,280 +1,195 @@
-version = 'v1.3.0'
+version:str = 'v2.0.0'
 '''
+Finalpass v2.0.0
+
 Author: MrDerpus
 
-Description:
-A secure CLI password generator & manager.
-
 Python 3.12.3
-Ubuntu Linux 24.04.3
+Ubuntu 24.03.3 LTS
+
+Now using TOME v1.3.1, a custom made data language with SQL-like table definition
+and CSV data entry. can also support:
+Python dict <> TOME <> JSON <> Python dict 
+
+
+Support Linux for now.
+Support CLi application for now.
 '''
 
-from sys      import argv, exit as kill
-from settings import function as func, AES, database
-from os.path  import exists, join
+from rich.traceback import install; install(show_locals = True)
+from rich.console   import Console; Print = Console().print
 
-from random   import shuffle
-from hashlib  import sha512 as hash
-import traceback
+from pyperclip import copy as pycopy
+import click
 
-from pysqlcipher3 import dbapi2 as sqlite3
+from settings import function as func
+from file_handling import String
+from TOME import TOME # TOME v1.3.1
 
-
-# Read config file
-config_file = func.read_config_file()
-database_location = config_file['database_location']
-clear_time = int(config_file['clipboard_clear_time'])
-password_length = int(config_file['password_length'])
-database_name = config_file['database_name']
-#print(config_file)
-
-# Remove main.py from argument list
-arguments = argv
-if(arguments[0] == 'main.py' or './finalpass' or 'finalpass'):
-	arguments.remove(arguments[0])
-
-# Create & setup db if it does not exist.
-db_file = join(database_location, database_name)
-
-# Database setup.
-if(not exists(db_file)):
-	while(True):
-		func.Print(f' Database name: {db_file} \n', fg='bright_yellow')
-		func.Print(' Enter a password that only YOU will remember.\n This password will be used to access your passwords in the database.\n Your password will be hidden.', fg='bright_cyan')
-		pass_attempt_1 = func.passinput(' Enter password: ')
-		pass_attempt_2 = func.passinput(' Confirm password: ')
-
-		# Compare password.
-		if(pass_attempt_1 == pass_attempt_2):
-			database_password = pass_attempt_2
-			connect  = sqlite3.connect(db_file)
-			cursor   = connect.cursor()
+from sys  import exit as kill
+from time import sleep
+import textwrap
+import gc
+import os
+username:str      = os.getlogin()
+directory:str     = os.path.join('./home', username, '.config', 'finalpassv2')
+config_path:str   = os.path.join(directory, 'config.tome')
+database_path:str = os.path.join(directory, 'db.tome')
+delimiter:str = '<9d1796cb-87f5-4c40-98e5-67e7a18b7d8e>' # used only for the database only.
 
 
-			cursor.execute(f'PRAGMA key = "{database_password}";')
-			cursor.execute(f'PRAGMA kdf_iter = {database.kdf};')
-			database.create_db(cursor=cursor)
-			connect.commit()
-			connect.close()
-			del pass_attempt_1, pass_attempt_2, database_password
-			break
-		else: print('\n\n')
+# create settings file and database location if it doesn't exist.
+if not os.path.exists(config_path):
+
+	os.makedirs(directory)
+
+	# Write default config settings.
+	default_settings = textwrap.dedent(f'''\
+	; TOME does not have mixed values by default.
+	; Both KEY and VALUE are treated as strings.
+	; clipboard_clear_time & password_length have their values converted to integers in the main program. 
+	config[key, value]:
+		database_location, {directory}
+		database_name, db.tome
+		clipboard_clear_time, 20
+		password_length, 32
+	!''')
+
+	with open(config_path, 'w') as file:
+		file.write(default_settings)
 
 
-# Connect to Database
-connect  = sqlite3.connect(db_file)
-cursor   = connect.cursor()
+if not os.path.exists(database_path):
+	database = f'passwords[service{delimiter} username{delimiter} email{delimiter} password]:\n'
+	
+	password = ['0', '1']
+	while password[0] != password[1]:
+		password[0] = func.passinput(' Enter a secure password only YOU will remember: ')
+		password[1] = func.passinput(' Confirm your password: ')
+		print()
+		
+	database_password = password[1]
 
 
-# loop through commands
-if(len(arguments) == 0):
-	func.Print(' No arguments given.', fg='bright_red')
+	enc_database = String.encrypt(database_password, database)
+
+	with open(database_path, 'wb') as file:
+		file.write(enc_database)
+
+	del password, database_password, database, enc_database
+	gc.collect()
+
+	Print(' Your password has been set.')
 	kill()
 
-arguments[0] = arguments[0].upper()
-function     = arguments[0]
-arguments.remove(function)
-match function:
 
-	# Display version
-	case 'VERSION':
-		print(f'\n finalpass version: {version}')
-
-
-	# Add a service.
-	case 'ADD':
-		
-		service  = 'NULL'
-		email    = 'NULL'
-		username = 'NULL'
-
-		for i in range(len(arguments)):
-			try:
-				flag = arguments[i].split('=')
-				flag_name = flag[0].strip()
-				value     = flag[1].strip()
-			except Exception as e:
-				func.Print(f' Flag error: \n{e}\n', fg='bright_red')
-			
-			match flag_name:
-				case 'service':  service = value
-				case 'email':    email = value
-				case 'username': username = value
-				case _:
-					func.Print(f' Unknown flag:\n{flag}\n', fg='bright_red')
-					kill()
-		
+# READ config settings
+settings:dict = TOME.read(config_path)
+database_location:str    = settings['config'][0]['value']
+database_name:str        = settings['config'][1]['value']
+clipboard_clear_time:int = int(settings['config'][2]['value'])
+password_length:int      = int(settings['config'][3]['value'])
+database_path:str = os.path.join(database_location, database_name)
 
 
-		database.add(cursor=cursor, service=service, email=email, username=username, password_length=password_length)
-		connect.commit()
-		connect.close()
 
 
-	# Select item from table (service, email, username, password)
-	case 'SELECT':
-
-		# Select entry from 
-		try:
-			flag = arguments[1].split('=')
-			flag_name = flag[0].strip()
-			value     = flag[1].strip()
-			item      = arguments[0].strip()
+@click.group()
+def cli(): pass
 
 
-		except Exception as e:
-			func.Print(f' Flag error: \n{e}\n', fg='bright_red')
-			kill()
-
-		database.select(cursor=cursor, item=item, flag=flag_name, value=value, sleep_time=clear_time)
-		connect.commit()
-		connect.close()
 
 
-	# list services within database.
-	case 'LIST':
-		database_password = func.passinput(' Enter password: ')
-		cursor.execute(f'PRAGMA key = "{database_password}";')
-		cursor.execute(f'PRAGMA kdf_iter = {database.kdf};')
-		del database_password
+# Add entry to TOME/Database file.
+@click.command()
+@click.option('--service',  '-s', default = 'NULL')
+@click.option('--username', '-u', default = 'NULL')
+@click.option('--email',    '-e', default = 'NULL')
+#@click.option('--overwrite','-o', default = False)
+def add(service:str, username:str, email:str) -> None:
 
-		service_list = cursor.execute('SELECT service FROM database;').fetchall()
-		connect.commit()
-		connect.close()
-		
-		print('\n------[ Services ]------')
-		for i in range(len(service_list)):
-			func.Print(f'| {service_list[i][0]}', fg='bright_cyan')
-			print('------------------------')
+	if service == 'NULL':
+		print(' No service was specified, killing program.')
+		kill()
 
+	database_password = func.passinput(' Enter database password: ')
 
-	# Remove entire entry associated with the provided service.
-	case 'REMOVE':
-		database_password = func.passinput(' Enter password: ')
-		cursor.execute(f'PRAGMA key = "{database_password}";')
-		cursor.execute(f'PRAGMA kdf_iter = {database.kdf};')
-		del database_password
+	# Read from database file
+	with open(database_path, 'rb') as file:
+		enc_database = file.read()
 
-		try:
-			flag = arguments[0].split('=')
-			flag_name = flag[0].strip()
-			value     = flag[1].strip()
+	# Decrypt data
+	database = String.decrypt(database_password, enc_database)
+	database += f'{service}{delimiter}{username}{delimiter}{email}{delimiter}{func.generate(password_length)}\n'
 
+	enc_database = String.encrypt(database_password, database)
 
-		except Exception as e:
-			func.Print(f' Flag error: \n{e}\n', fg='bright_red')
-			kill()
-		
+	with open(database_path, 'wb') as file:
+		file.write(enc_database)
 
-		service = value
-		cursor.execute(f'DELETE FROM database WHERE service = "{service}";')
-		connect.commit()
-		connect.close()
-		func.Print(f' Removed {value} from saved passwords.')
+	del database_password, enc_database, database
+	gc.collect()
+cli.add_command(add)
 
 
-	# Change item in database.
-	case 'CHANGE':
 
-		try:
-			flag = arguments[1].split('=')
-			flag_name = flag[0].strip()
-			value     = flag[1].strip()
-			item = arguments[0]
+@click.command()
+def list() -> None:
+	database_password = func.passinput(' Enter database password: ')
 
-		except Exception as e:
-			func.Print(f'{e}', fg='bright_red')
-			traceback.print_exc()
-			kill()
+	# Read from database file
+	with open(database_path, 'rb') as file: enc_database = file.read()
 
+	# Decrypt data
+	dec_database:str  = String.decrypt(database_password, enc_database)
+	database:dict = TOME.read(dec_database, from_string=True, delimiter=delimiter)
+	database = database['passwords']
 
-		database_password = func.passinput(' Enter password: ')
-		cursor.execute(f'PRAGMA key = "{database_password}";')
-		cursor.execute(f'PRAGMA kdf_iter = {database.kdf};')
+	for i in range(len(database)):
+		Print(database[i]['service'])
 
-		if(item == 'password'):
-			new_password = func.generate(password_length)
-			encrypted_password = AES.encrypt(database_password, new_password)
-
-			command = 'UPDATE database SET password = ? WHERE service = ?;'
-			cursor.execute(command, (encrypted_password, value))
-			func.Print(f' Password for {value} successfully changed.', fg='bright_green')
-
-		elif(item in ['service', 'email', 'username']):
-			if(len(arguments) < 3): #awww
-				func.Print(f' Missing new value. Example: change {item} new_value service=oldservice', fg="bright_red")
-				kill()
-
-			new_value = arguments[2].strip()
-			old_service = value
-
-			command = f'UPDATE database SET {item} = ? WHERE service = ?;'
-			cursor.execute(command, (new_value, old_service))
-			func.Print(f' {item.capitalize()} for {old_service} updated to "{new_value}".', fg='bright_green')
-
-		
-
-		del database_password
-		connect.commit()
-		connect.close()
-	
-
-	# Mass add accounts to the database.
-	case 'MASSADD':
-		valid_file_input = False
-
-		database_password = func.passinput(' Enter database password: ')
-		cursor.execute(f'PRAGMA key = "{database_password}";')
-		cursor.execute(f'PRAGMA kdf_iter = {database.kdf};')
+	del database_password, dec_database, database
+	gc.collect()
+cli.add_command(list)
 
 
-		massread_file = arguments[0].strip()
-		if(not exists(massread_file)):
-			func.Print(f' \'{massread_file}\' does could not be found. \n', fg='bright_red')
-			kill()
 
-		
-		with open(massread_file, 'r') as file:
-			for line in file:
-				line = line.strip()
-				# Skip over line if blank or comment.
-				if(not line or line.startswith(('#', ';'))): continue
+# select column value, from user defined service
+@click.command()
+@click.argument('service')
+@click.argument('item')
+def select(service:str, item:str) -> None:
+	database_password = func.passinput(' Enter database password: ')
 
-				# Sanitise and cleanse entries.
-				split_line = line.split(',')
-				for i in range(len(split_line)):
-					split_line[i] = split_line[i].strip()
-					if(split_line[i] == ''): split_line[i] = 'NULL'
-					#if('' in split_line): split_line.remove('')
-				
-				# Skip line if incomplete.
-				if(len(split_line) <3): # Awww
-					continue
+	# Read from database file
+	with open(database_path, 'rb') as file: enc_database = file.read()
+
+	# Decrypt data
+	database:str  = String.decrypt(database_password, enc_database)
+	database:dict = TOME.read(database, from_string=True, delimiter=delimiter)
+	database = database['passwords']
+
+	match item:
+		case 'password':
+			for i in range(len(database)):
+				if database[i]['service'] == service:
+					pycopy(database[i][item])
+					sleep(clipboard_clear_time)
+					pycopy('')
+					break
+
+		case _:
+			for j in range(len(database)):
+				if database[j]['service'] == service:
+					Print(database[i][item])
+					break
+cli.add_command(select)
 
 
-				service  = split_line[0]
-				email    = split_line[1]
-				username = split_line[2]
-				valid_file_input = True
 
 
-				'''# Debug file value printing.
-				list_print = [line, split_line, service, email, username]
-				for i in range(len(list_print)):
-					print(f'{list_print[i]=}')
 
-					if(i >= 4): print('------------ \n')
-				'''
 
-				if(valid_file_input):
-					database.massadd(cursor=cursor, database_password=database_password, service=service, email=email, username=username, password_length=password_length)
-			
-		connect.commit()
-		connect.close()
 
-	# return error when given a false function.
-	case _:
-		func.Print(f' {function} is not a valid function.\n version, add, select, list, remove & change are valid options', fg='bright_red')
-
-kill()
-# -----------
+if __name__ == '__main__':
+	cli()
