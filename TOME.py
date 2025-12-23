@@ -2,15 +2,12 @@
 Author: MrDerpus
 Python version: 3.12.3
 
-TOME Parser v1.3.1
+TOME Parser v1.4.0
 Table Oriented Markup Encoding
-
-I just wanted a good looking data structure that is easy to use in python.
-Also because I keep seeing MEMEs about TOON.
 '''
 class TOME:
 	@staticmethod
-	def read(_input:str, from_string:bool=False, delimiter:str=',') -> dict:
+	def read(input:str, from_string:bool=False, delimiter:str=',') -> dict:
 
 		# Present error message to terminal. (used inside strict_cast) ----
 		def strict_type_error(expected:str, value:str, column:str, file:str, line:int) -> None:
@@ -88,7 +85,7 @@ class TOME:
 
 					if syntax['brackets'][0] not in line or syntax['brackets'][1] not in line:
 						raise ValueError(
-							f'\n\nTOMEparseError @ line {line_number} in {_input}:\n'
+							f'\n\nTOMEparseError @ line {line_number} in {input}:\n'
 							f'Malformed table header.\n'
 						)
 
@@ -118,7 +115,7 @@ class TOME:
 							
 							else:
 								raise ValueError(
-									f'\n\nTOMEparseError @ line {line_number} in {_input}, in Table [\'{table_name}\']:\n'
+									f'\n\nTOMEparseError @ line {line_number} in {input}, in Table [\'{table_name}\']:\n'
 									f'Invalid data type \'{_type}\', expected only: \n'
 									'[String/str, Integer/int, float, Boolean/bool].\n'
 								)
@@ -136,7 +133,7 @@ class TOME:
 
 					if len(values) != len(columns):
 						raise ValueError(
-							f'\n\nTOMEparseError @ line {line_number} in {_input}:\n'
+							f'\n\nTOMEparseError @ line {line_number} in {input}:\n'
 							f'Table: [\'{table_name}\'] has {len(columns)} columns defined in header but has {len(values)} values.\n'
 						)
 
@@ -148,7 +145,7 @@ class TOME:
 								values[i],
 								data_type[i],
 								columns[i],
-								_input,
+								input,
 								line_number
 							)
 
@@ -166,13 +163,13 @@ class TOME:
 		# If user chooses to read from a file, grab lines from the file and place them
 		# into a list to be parsed by the TOME parser.
 		if from_string == False:
-			with open(_input, 'r') as file:
+			with open(input, 'r') as file:
 				string_list = file.readlines()
 		
 		# Otherwise, treat the input as plaintext, and parse the string data with the
 		# TOME Parser. 
 		else:
-			string_list = _input.splitlines()
+			string_list = input.splitlines()
 
 		# Return parsed data.
 		parsed_data = PARSER_LOGIC(string_list)
@@ -181,7 +178,7 @@ class TOME:
 
 
 	@staticmethod
-	def write(output_file:str, table:dict, mode:str='a') -> None:
+	def write(output:str='', to_string:bool=False, table:dict={}, mode:str='a', delimiter:str=',') -> None | str:
 
 		type_map:dict = { # Data type mapping.
 			str: 'str',
@@ -217,26 +214,32 @@ class TOME:
 			columns = list(rows[0].keys())
 
 			# Assign data types from the first row.
-			types = [infer_type(rows[0][column]) for column in columns]
+			types = [ infer_type(rows[0][column]) for column in columns ]
 
 			# Build typed header: column:type
 			typed_columns = [ f'{column}:{types[i]}' for i, column in enumerate(columns) ]
 
 			# Append header line to output.
-			lines.append(f'\n\n{table_name}[{", ".join(typed_columns)}]:')
+			lines.append( f'\n\n{table_name}[{delimiter.join(typed_columns)}]:' )
 
 			# Append rows to output.
 			for row in rows:
-				values = [format_value(row[column]) for column in columns]
-				lines.append('\t' + ', '.join(values))
+				values = [ format_value(row[column]) for column in columns ]
+				lines.append('\t' + delimiter.join(values))
 
 			# Add blank line between tables to avoid dict / table reading conflicts.
 			lines.append('')
 
-		# Write to output file.
-		with open(output_file, mode) as f:
-			f.write('\n'.join(lines))
+		output_str = '\n'.join(lines)
 
+		if to_string == False:
+			# Write to output file.
+			with open(output, mode) as f:
+				f.write(output_str)
+			return None
+
+		else:
+			return output_str
 
 
 

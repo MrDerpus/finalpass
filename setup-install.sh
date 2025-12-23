@@ -1,24 +1,26 @@
 #!/bin/bash
 
-
 # Variable declaration
 CURRENT_DIR=$PWD
 INSTALL_LOC="/usr/local/bin"
-CONFIG_LOC="$HOME/.config/finalpass"
-CONFIG_FILE="$CONFIG_LOC/finalpass.conf"
+CONFIG_LOC="$HOME/.config/finalpassv2"
+CONFIG_FILE="$CONFIG_LOC/finalpass.tome"
 DATABASE_NAME="encrypted_database.db"
+CLEAR_TIME=20 # time in seconds
+PASS_LENGTH=32
 
 # create .config directory & create config file
 mkdir -p "$CONFIG_LOC"
-echo "database_location=$CONFIG_LOC" >  "$CONFIG_FILE"
-echo "database_name=$DATABASE_NAME"  >> "$CONFIG_FILE"
-echo "clipboard_clear_time=15"       >> "$CONFIG_FILE"
-echo "password_length=32"            >> "$CONFIG_FILE"
 
-# Install dependencies for pysqlchipher3
-sudo apt update
-sudo apt install -y python3.12-dev libsqlcipher-dev zlib1g-dev build-essential
-sudo apt install --reinstall zlib1g=1:1.3.dfsg-3.1ubuntu2 zlib1g-dev
+echo "; TOME does not have mixed values by default.
+; Both KEY and VALUE are treated as strings.
+; clipboard_clear_time & password_length have their values converted to integers in the main program. 
+config[key, value]:
+	database_location, $CONFIG_FILE
+	database_name, $DATABASE_NAME
+	clipboard_clear_time, $CLEAR_TIME
+	password_length, $PASS_LENGTH
+!" > $CONFIG_FILE
 
 # Install program reqs.txt
 python3 -m venv venv

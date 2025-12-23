@@ -1,16 +1,14 @@
+from rich.console import Console; Print = Console().print
+
+from sys     import exit as kill
 from random  import randint, shuffle
 from getpass import getpass
-from sys     import exit as kill
 import hashlib
 import string
 import os
 
-from colours   import COLOUR
-
 
 alphabet = string.punctuation + string.ascii_letters + string.digits
-col = COLOUR.Colours
-
 
 
 class function:
@@ -26,7 +24,7 @@ class function:
 			for line in config:
 				line = line.strip()
 				# Skip over line if blank or comment.
-				if(not line or line.startswith(('#', ';'))): continue
+				if not line or line.startswith(('#', ';')) : continue
 				
 				line = line.split('=')
 				# Skip line if incomplete.
@@ -46,14 +44,6 @@ class function:
 		return return_values
 
 
-	@staticmethod
-	def Print(text:str='', bg:str='black', fg:str='bright_white') -> None:
-		bg      = f'bg_{bg}'
-		colours = f'{col[bg]}{col[fg]}'
-		text    = f'{colours}{text}{col["reset"]}'
-
-		print(text)
-
 
 	@staticmethod
 	def generate(pass_length:int) -> str:
@@ -63,6 +53,7 @@ class function:
 		for i in range(len(alphabet)):
 			to_list += [alphabet[i]]
 
+		# shuffle the list 10 times.
 		for j in range(10):
 			shuffle(to_list)
 
@@ -80,3 +71,12 @@ class function:
 
 		return hashed_password
 
+
+
+	@staticmethod
+	def check_service(service:str, database:dict) -> None:
+		
+		for i in range(len(database)):
+			if database[i]['service'] == service:
+				Print(f' Service: "{service}" already exists within your database.', style='#ff0000')
+				kill()

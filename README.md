@@ -1,11 +1,12 @@
-finalpass v2.0.0
+finalpass v2.0.1
 ================
-# README needs to be updated, will do that tomorrow.
-## I have completely rewrote everything.
+# Still needs proper testing.
+# Do not use until v2.1.0
+# README needs major update.
 **The only local password manager and generator, *I* will ever need.** <br>
 
 ```
-Version: v2.0.0
+Version: v2.0.1
 
 Author: MrDerpus
 
@@ -28,30 +29,30 @@ chmod +x setup-install.sh
 1. add:
 ```sh
 # Add service with all parameters.
-finalpass add service=facebook email=fake@email.com username=user-name
+finalpass add --service facebook --email fake@email.com --username user-name
+finalpass add -s facebook -e fake@email.com -u user-name
 ```
 
-You must pass at least one argument for that entry to be saved, and the password to be generated.<br> 
-The password is auto generated and encrypted with ***AES256*** before it is stored in the database.<br><br>
-The database is also set with a sha512 hash of the users desired password. 
+You must pass at least the service for that entry to be saved, and the password to be generated.<br>
+The database is set with a sha512 hash of the users desired password. 
 The database password is never stored in the database.
 
 <br><br>
 2. massadd
 ```sh
-finalpass massadd massadd-file.csv
+finalpass massadd massadd-file.tome
 ```
 
 This allows you to add multiple inputs to the encrypted database with a single password entry, and using a single CSV file.<br>
 See massadd CSV file format standards at the bottom of the README.md
 
 <br><br>
-3. List:
+3. show:
 ```sh
-finalpass list
+finalpass show
 ```
 
-This will list saved services in the database.
+This will show the list list saved services in the database.
 
 <br><br>
 4. select:
@@ -59,42 +60,19 @@ This will list saved services in the database.
 # Select password associated with service.
 # The password is decrypted and sent to the users clipboard for 10 seconds,
 # then the clipboard is cleared.
-finalpass select password service=facebook
-
-# Select email associated with service.
-finalpass select email service=facebook
-
-# Select username associated with service.
-finalpass select username service=facebook
+finalpass select facebook password
 ```
 
 <br><br>
 5. remove:
 ```sh
 # Remove entire entry associated with given service name.
-finalpass remove service=facebook
-```
-
-<br><br>
-6. change:
-```sh
-# Change any item in database table associated with given parameters.
-# Change service name.
-finalpass change service service=facebook twitter
-
-# Change email address for defined service.
-finalpass change email service=twitter new_email@email.com
-
-# Change username for defined service
-finalpass change username service=twitter new_username
-
-# Auto generate and encrypt a new password for service. 
-finalpass change password service=twitter
+finalpass remove facebook
 ```
 
 
 <br><br>
-7. version:
+6. version:
 ```sh
 # Display finalpass version
 finalpass version
