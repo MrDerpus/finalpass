@@ -74,9 +74,10 @@ class function:
 
 
 	@staticmethod
-	def check_service(service:str, database:dict) -> None:
+	def check_service(service:str, database:dict, exit:bool=True) -> None:
 		
 		for i in range(len(database)):
 			if database[i]['service'] == service:
 				Print(f' Service: "{service}" already exists within your database.', style='#ff0000')
-				kill()
+				
+				if exit == True: kill()

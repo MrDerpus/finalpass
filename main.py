@@ -1,22 +1,19 @@
-_version:dict = {'finalpass':'v2.0.1', 'TOME':'v1.4.0'}
+_version:dict = {'finalpass':'v2.1.0', 'TOME':'v1.4.0'}
 '''
-Finalpass v2.0.1
+Finalpass v2.1.0
 
 Author: MrDerpus
 
 Python 3.12.3
 Ubuntu 24.03.3 LTS
 
-Now using TOME v1.3.1, a custom made data language with SQL-like table definition
-and CSV data entry. can also support:
-Python dict <> TOME <> JSON <> Python dict 
-
+Now using TOME as the standard config and database setting
 
 Support Linux for now.
 Support CLi application for now.
 '''
 
-from rich.traceback import install; install(show_locals = True)
+#from rich.traceback import install; install(show_locals = True)
 from rich.console   import Console; Print = Console().print
 from rich.table     import Table
 
@@ -25,11 +22,10 @@ import click
 
 from settings      import function as func
 from file_handling import String
-from TOME import TOME # TOME v1.3.1
+from TOME import TOME
 
 from sys  import exit as kill
 from time import sleep
-import textwrap
 import gc
 import os
 
@@ -40,13 +36,13 @@ username:str  = os.getlogin()
 directory:str = ''
 
 if user_platform == 'LINUX':
-	directory = os.path.join('./home', username, '.config', 'finalpassv2')
+	directory = os.path.join('/home', username, '.config', 'finalpassv2')
 
 #elif user_platform == 'WINDOWS': # NEEDS TESTING
 #	directory = os.path.join('C', 'Users', username, '.config', 'finalpassv2')
 
 else:
-	print(f' We are sorry, but finalpass is not currently supported for your os:\n {user_platform}\n')
+	print(f" I'm Sorry {user_platform}, I'm afraid I can't do that.\n finalpass is not currently supported for your os:\n {user_platform}\n")
 	kill()
 
 config_path:str = os.path.join(directory, 'config.tome')
@@ -55,8 +51,7 @@ delimiter:str   = '<9d1796cb-87f5-4c40-98e5-67e7a18b7d8e>' # used only for the e
 
 
 # READ config settings
-settings:dict = TOME.read(config_path)
-settings = settings['config']
+settings:dict = TOME.read(config_path)['config']
 database_location:str    = settings[0]['value']
 database_name:str        = settings[1]['value']
 clipboard_clear_time:int = int(settings[2]['value'])
@@ -66,7 +61,7 @@ database_path:str = os.path.join(database_location, database_name)
 
 
 if not os.path.exists(database_path):
-	database = f'passwords[service:str{delimiter} username:str{delimiter} email:str{delimiter} password:str]:\n'
+	database:str = f'passwords[service:str{delimiter} username:str{delimiter} email:str{delimiter} password:str]:\n'
 	
 	password = ['0', '1']
 	while password[0] != password[1]:
@@ -158,7 +153,7 @@ def massadd(input:str) -> None:
 		enc_database = file.read()
 
 	
-	massadd = TOME.read(input)
+	massadd:dict = TOME.read(input)
 	massadd = massadd[input.split('.')[0].strip()]
 
 	# Decrypt data
@@ -173,7 +168,7 @@ def massadd(input:str) -> None:
 		email:str    = massadd[i]['email']
 		username:str = massadd[i]['username']
 
-		func.check_service(service, database)
+		func.check_service(service, database, False)
 
 		dec_database += f'{service}{delimiter}{username}{delimiter}{email}{delimiter}{func.generate(password_length)}\n'
 
@@ -184,6 +179,7 @@ def massadd(input:str) -> None:
 	with open(database_path, 'wb') as file:
 		file.write(enc_database)
 cli.add_command(massadd)
+
 
 
 @click.command()
@@ -263,6 +259,11 @@ cli.add_command(select)
 @click.command()
 @click.argument('service')
 def remove(service:str) -> None:
+	Print(f' Are you sure you want to remove {service} from the database?', style='#ffff00')
+	confirm:str = input('Yes!/no!: ').upper().strip()
+	if confirm == 'YES!': pass
+	else: kill()
+
 	database_password = func.passinput(' Enter database password: ')
 
 	# Read from database file
@@ -273,7 +274,7 @@ def remove(service:str) -> None:
 	dec_database = String.decrypt(database_password, enc_database)
 
 	# check to make sure the user is not adding a service with the same name
-	database = TOME.read(dec_database, from_string=True, delimiter=delimiter)	
+	database = TOME.read(dec_database, from_string=True, delimiter=delimiter)
 	#func.check_service(service, database)
 
 	for i in range(len(database['passwords'])):
@@ -288,23 +289,70 @@ def remove(service:str) -> None:
 
 			break
 
-			del database_password, remove_item, dec_database, string_database, enc_database, database
-			gc.collect()
+	del database_password, remove_item, dec_database, string_database, enc_database, database
+	gc.collect()
 cli.add_command(remove)
 
 
 
-#@click.command()
-#@click.argument('service')
-#def change(service:str):
-#	...
+@click.command()
+@click.argument('service')
+@click.argument('field')
+@click.argument('value', default='NULL')
+def change(service:str, field:str, value:str) -> None:
+	Print(f' Are you sure you want to change the {field} for {service} in the database?', style='#ffff00')
+	confirm:str = input('Yes!/no!: ').upper().strip()
+	if confirm == 'YES!': pass
+	else: kill()
+
+	service = service.strip()
+	field   = field.strip().lower()
+	value   = value.strip()
+
+	database_password = func.passinput(' Enter database password: ')
+
+	# Read from database file
+	with open(database_path, 'rb') as file:
+		enc_database = file.read()
+
+	# Decrypt data
+	dec_database = String.decrypt(database_password, enc_database)
+
+	database = TOME.read(from_string=True, input=dec_database, delimiter=delimiter)
+	
+	for i in range(len(database)):
+	
+		if database['passwords'][i]['service'] == service:
+
+			if field == 'password':
+				database['passwords'][i]['password'] = func.generate(password_length)
+				break
+
+			database['passwords'][i][field] = value
+			break
+
+	dec_database = TOME.write(to_string=True, table=database, delimiter=delimiter)
+	enc_database = String.encrypt(database_password, dec_database)
+
+	# write data
+	with open(database_path, 'wb') as file:
+		file.write(enc_database)
+
+	del database_password, dec_database, database, enc_database
+	gc.collect()
+cli.add_command(change)
+
+
 
 @click.command()
-def version(version=_version):
-	Print(f'''\
-	Finalpass: {version["finalpass"]} https://github.com/MrDerpus/finalpass/tree/v2.0.0
-	TOME: {version["TOME"]} https://github.com/MrDerpus/TOME
-	''')
+def version(version:dict=_version) -> None:
+	Print(
+		'\n'
+		f' Finalpass: {version["finalpass"]}\n https://github.com/MrDerpus/finalpass/tree/v2.0.0'
+		'\n\n'
+		f' TOME: {version["TOME"]}\n https://github.com/MrDerpus/TOME'
+		'\n'
+	)
 cli.add_command(version)
 
 if __name__ == '__main__':

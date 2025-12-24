@@ -4,10 +4,11 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ('colours.py',  '.'),
+        ('TOME.py',  '.'),
+        ('file_handling.py', '.'),
         ('settings.py', '.')
     ],
-    hiddenimports=['pyperclip', 'pysqlcipher3'],
+    hiddenimports=['pyperclip'],
     hookspath=[],
     runtime_hooks=[],
     excludes=['tkinter', 'matplotlib'],
